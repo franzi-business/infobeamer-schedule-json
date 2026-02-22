@@ -223,8 +223,15 @@ def main():
                                     talk["date"][:19], "%Y-%m-%dT%H:%M:%S"
                                 )
                             )
-                            d_h, d_m = talk["duration"].split(":")
-                            end = start + timedelta(hours=int(d_h), minutes=int(d_m))
+                            d_d = 0
+                            d_h = 0
+                            d_m = 0
+                            try:
+                                d_h, d_m = talk["duration"].split(":")
+                            except ValueError:
+                                d_d, d_h, d_m = talk["duration"].split(":")
+
+                            end = start + timedelta(days = int(d_d), hours=int(d_h), minutes=int(d_m))
 
                             talk["start_ts"] = int(
                                 timegm(start.timetuple())
