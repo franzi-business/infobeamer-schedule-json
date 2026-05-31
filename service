@@ -263,8 +263,8 @@ def main():
                                 talk["abstract"] = ""
 
                             persons = []
-                            for p in talk["persons"]:
-                                name = p.get("public_name", p.get("name"))
+                            for p in talk.get("persons", []):
+                                name = p.get("name")
                                 if name:
                                     persons.append(name)
                             talk["persons"] = persons
