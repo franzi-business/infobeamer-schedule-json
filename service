@@ -242,7 +242,11 @@ def main():
                                 timegm(end.timetuple())
                                 - end.utcoffset().total_seconds()
                             )
-                            talk["locale"] = talk.get("language", "").split('-')[0]
+                            locale = talk.get("language", None)
+                            if locale:
+                                talk["locale"] = locale.split('-')[0]
+                            else:
+                                talk["locale"] = None
 
                             track = None
                             if talk["track"]:
