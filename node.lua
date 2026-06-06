@@ -168,7 +168,7 @@ function node.render()
                     track_x + PADDING*0.3,
                     track_y + info_size + PADDING*0.3
                 )
-                if brightness > 0.6 then
+                if brightness > 0.7 then
                     font_track:write(
                         track_x - track_width,
                         track_y,
