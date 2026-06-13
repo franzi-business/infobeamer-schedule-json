@@ -159,6 +159,7 @@ def main():
                     )
                     talk["room_uuid"] = room_uuid_mapping.get(talk["room"])
                     talk["do_not_record"] = talk.get("do_not_record", False)
+                    talk["type"] = None
                     if not talk["abstract"]:
                         talk["abstract"] = ""
                     if talk["track"]:

@@ -124,6 +124,17 @@ local function wrap(str, font, size, max_w)
     return lines
 end
 
+local function has_value(tab, val)
+    for index, value in ipairs(tab) do
+        if value == val then
+            return true
+        end
+    end
+
+    return false
+end
+
+
 local function check_next_talks()
     log("time is now " .. time)
     if time == 0 then
@@ -291,6 +302,16 @@ local function view_all_talks(starts, ends, config, x1, y1, x2, y2)
     local title_size = config.font_size or 70
     local default_color = {helper.parse_rgb(config.color or "#ffffff")}
     local show_speakers = config.all_speakers or true
+    local proposal_type_filter = config.proposal_type_filter or ""
+    local proposal_types = {}
+
+    if proposal_type_filter ~= "" then
+        log("filtering for proposals with type: ")
+        for i in string.gmatch(proposal_type_filter, "([^;]+)") do
+            table.insert(proposal_types, i)
+            log("  - '" .. i .. "'")
+        end
+    end
 
     local a = anims.Area(x2 - x1, y2 - y1)
 
@@ -319,82 +340,89 @@ local function view_all_talks(starts, ends, config, x1, y1, x2, y2)
     for idx = 1, #all_next_talks do
         local talk = all_next_talks[idx]
 
-        local title = talk.title
-        if show_language and talk.locale ~= json.null then
-            title = title .. " (" .. talk.locale .. ")"
+        local show_this_talk = true
+        if talk.type ~= json.null and proposal_type_filter ~= "" then
+            show_this_talk = has_value(proposal_types, talk.type)
         end
 
-        local title_lines = wrap(
-            title,
-            font_talk, title_size, a.width - col2
-        )
+        if show_this_talk then
+            local title = talk.title
+            if show_language and talk.locale ~= json.null then
+                title = title .. " (" .. talk.locale .. ")"
+            end
 
-        local info_line = talk.room
+            local title_lines = wrap(
+                title,
+                font_talk, title_size, a.width - col2
+            )
 
-        if show_speakers and #talk.persons > 0 then
-            local joiner = ({
-                de = "mit",
-            })[talk.locale or ""] or "with"
-            info_line = info_line .. " " .. joiner .. " " .. table.concat(talk.persons, ", ")
+            local info_line = talk.room
+
+            if show_speakers and #talk.persons > 0 then
+                local joiner = ({
+                    de = "mit",
+                })[talk.locale or ""] or "with"
+                info_line = info_line .. " " .. joiner .. " " .. table.concat(talk.persons, ", ")
+            end
+
+            local info_lines = wrap(
+                info_line,
+                font_text, info_size, a.width - col2
+            )
+
+            if y + #title_lines * title_size + 3 + #info_lines * info_size > a.height then
+                break
+            end
+
+            -- time
+            local talk_time
+            local delta = talk.start_ts - time
+            if delta > -60 and delta < 60 then
+                talk_time = "Now"
+            elseif delta > 30*60 then
+                talk_time = talk.start_str
+            elseif delta > 0 then
+                talk_time = string.format("in %d min", math.floor(delta/60)+1)
+            else
+                talk_time = string.format("%d min ago", math.ceil(-delta/60))
+            end
+            local time_width = font_text:width(talk_time, time_size)
+            text(font_text, col2 - 35 - time_width, y, talk_time, time_size, rgba(default_color, 1))
+
+            -- show optout icon for talks that are optout
+            if talk.do_not_record then
+                a.add(anims.moving_image(
+                    S, E, optout,
+                    col2 - 35 - info_size, y + time_size,
+                    col2 - 35, y + time_size + info_size,
+                    1
+                ))
+            end
+
+            -- track
+            if show_track and talk.track ~= json.null and talk.track.color ~= json.null then
+                local r,g,b = helper.parse_rgb(talk.track.color)
+                a.add(anims.moving_image_raw(
+                    S, E, resource.create_colored_texture(r,g,b,1),
+                    col2 - 25, y,
+                    col2 - 10, y + #title_lines*title_size + 3 + #info_lines*info_size
+                ))
+            end
+
+            -- title
+            for idx = 1, #title_lines do
+                text(font_talk, col2, y, title_lines[idx], title_size, rgba(default_color,1))
+                y = y + title_size
+            end
+            y = y + 3
+
+            -- info
+            for idx = 1, #info_lines do
+                text(font_text, col2, y, info_lines[idx], info_size, rgba(default_color,.8))
+                y = y + info_size
+            end
+            y = y + 20
         end
-
-        local info_lines = wrap(
-            info_line,
-            font_text, info_size, a.width - col2
-        )
-
-        if y + #title_lines * title_size + 3 + #info_lines * info_size > a.height then
-            break
-        end
-
-        -- time
-        local talk_time
-        local delta = talk.start_ts - time
-        if delta > -60 and delta < 60 then
-            talk_time = "Now"
-        elseif delta > 30*60 then
-            talk_time = talk.start_str
-        elseif delta > 0 then
-            talk_time = string.format("in %d min", math.floor(delta/60)+1)
-        else
-            talk_time = string.format("%d min ago", math.ceil(-delta/60))
-        end
-        local time_width = font_text:width(talk_time, time_size)
-        text(font_text, col2 - 35 - time_width, y, talk_time, time_size, rgba(default_color, 1))
-
-        -- show optout icon for talks that are optout
-        if talk.do_not_record then
-            a.add(anims.moving_image(
-                S, E, optout,
-                col2 - 35 - info_size, y + time_size,
-                col2 - 35, y + time_size + info_size,
-                1
-            ))
-        end
-
-        -- track
-        if show_track and talk.track ~= json.null and talk.track.color ~= json.null then
-            local r,g,b = helper.parse_rgb(talk.track.color)
-            a.add(anims.moving_image_raw(
-                S, E, resource.create_colored_texture(r,g,b,1),
-                col2 - 25, y,
-                col2 - 10, y + #title_lines*title_size + 3 + #info_lines*info_size
-            ))
-        end
-
-        -- title
-        for idx = 1, #title_lines do
-            text(font_talk, col2, y, title_lines[idx], title_size, rgba(default_color,1))
-            y = y + title_size
-        end
-        y = y + 3
-
-        -- info
-        for idx = 1, #info_lines do
-            text(font_text, col2, y, info_lines[idx], info_size, rgba(default_color,.8))
-            y = y + info_size
-        end
-        y = y + 20
     end
 
     for now in api.frame_between(starts, ends) do

@@ -40,6 +40,16 @@ var config = {
               class='form-check-input'/>
             Show speaker names
           </div>
+          <div class='col-xs-3'>
+            Proposal Type Filter<br/>
+            <input
+              type="text"
+              v-model="proposal_type_filter"
+              class='form-control'/>
+          </div>
+          <div class='col-xs-3'>
+            Proposal Type Filter accepts one or more proposal types, separated by <code>;</code>. Leaving this empty means showing all proposal types.
+          </div>
         </div>
       </template>
       <template v-if='mode == "next_talk"'>
@@ -166,6 +176,7 @@ var config = {
     font_size: ChildTile.config_value('font_size', 70, parseInt),
 
     all_speakers: ChildTile.config_value('all_speakers', true),
+    proposal_type_filter: ChildTile.config_value('proposal_type_filter', ''),
 
     next_abstract: ChildTile.config_value('next_abstract', false),
     next_track_text: ChildTile.config_value('next_track_text', false),
