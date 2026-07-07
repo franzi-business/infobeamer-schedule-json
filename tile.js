@@ -4,7 +4,7 @@ var config = {
     <div>
       <h4>Frab Plugin</h4>
       <div class='row'>
-        <div class='col-xs-3'>
+        <div class='col-xs-6'>
           Display Mode<br/>
           <select class='btn btn-default' v-model="mode">
             <option value="all_talks">All Talks</option>
@@ -33,36 +33,36 @@ var config = {
       <template v-if='mode == "all_talks"'>
         <h4>All Talks options</h4>
         <div class='row'>
-          <div class='col-xs-3'>
+          <div class='col'>
             <input
               type="checkbox"
               v-model="all_speakers"
               class='form-check-input'/>
             Show speaker names
           </div>
-          <div class='col-xs-3'>
+        </div>
+        <div class='row'>
+          <div class='col'>
             Proposal Type Filter<br/>
             <input
               type="text"
               v-model="proposal_type_filter"
               class='form-control'/>
-          </div>
-          <div class='col-xs-3'>
-            Proposal Type Filter accepts one or more proposal types, separated by <code>;</code>. Leaving this empty means showing all proposal types.
+            Proposal Type Filter accepts one or more proposal types, separated by <code>;</code>. Leaving this empty means showing all proposal types. Use ! to invert
           </div>
         </div>
       </template>
       <template v-if='mode == "next_talk"'>
         <h4>Next Talk options</h4>
         <div class='row'>
-          <div class='col-xs-3'>
+          <div class='col-xs-6'>
             <input
               type="checkbox"
               v-model="next_abstract"
               class='form-check-input'/>
             Show abstract
           </div>
-          <div class='col-xs-3'>
+          <div class='col-xs-6'>
             <input
               type="checkbox"
               v-model="next_track_text"
@@ -74,7 +74,7 @@ var config = {
       <template v-if='mode == "room"'>
         <h4>Room options</h4>
         <div class='row'>
-          <div class='col-xs-3'>
+          <div class='col-xs-6'>
             Alignment<br/>
             <select class='btn btn-default' v-model="room_align">
               <option value="left">Align left</option>
@@ -82,7 +82,7 @@ var config = {
               <option value="right">Align right</option>
             </select>
           </div>
-          <div class='col-xs-3'>
+          <div class='col-xs-6'>
             <input
               type="checkbox"
               v-model="room_animate"
@@ -94,7 +94,7 @@ var config = {
       <template v-if='mode == "clock"'>
         <h4>Clock options</h4>
         <div class='row'>
-          <div class='col-xs-3'>
+          <div class='col-xs-6'>
             Alignment<br/>
             <select class='btn btn-default' v-model="clock_align">
               <option value="left">Align left</option>
@@ -102,7 +102,7 @@ var config = {
               <option value="right">Align right</option>
             </select>
           </div>
-          <div class='col-xs-3'>
+          <div class='col-xs-6'>
             <input
               type="checkbox"
               v-model="clock_animate"
@@ -114,7 +114,7 @@ var config = {
       <template v-if='mode == "day"'>
         <h4>Day options</h4>
         <div class='row'>
-          <div class='col-xs-3'>
+          <div class='col-xs-6'>
             Alignment<br/>
             <select class='btn btn-default' v-model="day_align">
               <option value="left">Align left</option>
@@ -122,15 +122,7 @@ var config = {
               <option value="right">Align right</option>
             </select>
           </div>
-          <div class='col-xs-3'>
-            Format<br/>
-            <input
-              type="text"
-              v-model="day_template"
-              placeholder="Template: 'Day %s'"
-              class='form-control'/>
-          </div>
-          <div class='col-xs-3'>
+          <div class='col-xs-6'>
             <input
               type="checkbox"
               v-model="day_animate"
@@ -138,11 +130,21 @@ var config = {
             Fade in and out
           </div>
         </div>
+        <div class='row'>
+          <div class='col'>
+            Format<br/>
+            <input
+              type="text"
+              v-model="day_template"
+              placeholder="Template: 'Day %s'"
+              class='form-control'/>
+          </div>
+        </div>
       </template>
       <template v-if='mode == "info"'>
         <h4>Info options</h4>
         <div class='row'>
-          <div class='col-xs-3'>
+          <div class='col-xs-6'>
             Text Alignment<br/>
             <select class='btn btn-default' v-model="info_align">
               <option value="left">Align left</option>

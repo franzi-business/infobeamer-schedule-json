@@ -125,13 +125,25 @@ local function wrap(str, font, size, max_w)
 end
 
 local function has_value(tab, val)
+    local default_return = false
+
     for index, value in ipairs(tab) do
-        if value == val then
-            return true
+        if string.sub(value, 1, 1) == "!" then
+            -- if we have a inverted filter, the default return value (so, if
+            -- the filter did not match any values) should be true
+            default_return = true
+            local negated_val = string.sub(value, 2)
+            if negated_val == val then
+                return false
+            end
+        else
+            if value == val then
+                return true
+            end
         end
     end
 
-    return false
+    return default_return
 end
 
 
