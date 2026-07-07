@@ -43,12 +43,12 @@ var config = {
         </div>
         <div class='row'>
           <div class='col-xs-12'>
-            Proposal Type Filter<br/>
+            <h5>Proposal Type Filter</h5>
             <input
               type="text"
               v-model="proposal_type_filter"
               class='form-control'/>
-            Proposal Type Filter accepts one or more proposal types, separated by <code>;</code>. Leaving this empty means showing all proposal types. Use ! to invert
+            Accepts one or more proposal types, separated by <code>;</code>. Leaving this empty means showing all proposal types. Use <code>!</code> to invert (show everything but one proposal type.
           </div>
         </div>
       </template>
