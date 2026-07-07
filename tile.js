@@ -33,7 +33,7 @@ var config = {
       <template v-if='mode == "all_talks"'>
         <h4>All Talks options</h4>
         <div class='row'>
-          <div class='col'>
+          <div class='col-xs-12'>
             <input
               type="checkbox"
               v-model="all_speakers"
@@ -42,7 +42,7 @@ var config = {
           </div>
         </div>
         <div class='row'>
-          <div class='col'>
+          <div class='col-xs-12'>
             Proposal Type Filter<br/>
             <input
               type="text"
@@ -131,7 +131,7 @@ var config = {
           </div>
         </div>
         <div class='row'>
-          <div class='col'>
+          <div class='col-xs-12'>
             Format<br/>
             <input
               type="text"
