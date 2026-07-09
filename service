@@ -38,13 +38,14 @@ def log(msg):
     sys.stderr.write("[pretalx] {}\n".format(msg))
 
 
-def idle(seconds, event_start, event_end, event_tz, event_days):
+def idle(seconds, event_start, event_end, event_tz, event_days, last_error):
     end = time.time() + seconds
     log("sleeping for {} seconds".format(seconds))
     while time.time() < end:
         send_data = {
             "clock": "??",
             "day": "??",
+            "error": last_error,
             "time": int(time.time()),
         }
         if event_start is not None:
@@ -98,6 +99,7 @@ def main():
     event_start = None
     event_end = None
     schedule = None
+    last_error = ""
     event_tz = pytz.utc
 
     while True:
@@ -127,6 +129,9 @@ def main():
                 # Only print the error message. If we have fetched the event
                 # info json blob atleast once, we have all the information
                 # we need.
+
+                # Also, notify the frontend
+                last_error = str(e)
             else:
                 event_info = r.json()
 
@@ -147,137 +152,155 @@ def main():
                 # Only print the error message. If we have fetched the schedule
                 # info json blob atleast once, we have all the information
                 # we need.
+
+                # Also, notify the frontend
+                last_error = str(e)
             else:
-                schedule = JSONDecoder(object_pairs_hook=OrderedDict).decode(r.text)
-                tracks = {}
-                for talk in schedule["talks"]:
-                    talk["start_str"] = (
-                        datetime.fromtimestamp(talk["start_ts"])
-                        .replace(tzinfo=pytz.utc)
-                        .astimezone(event_tz)
-                        .strftime("%H:%M")
-                    )
-                    talk["room_uuid"] = room_uuid_mapping.get(talk["room"])
-                    talk["do_not_record"] = talk.get("do_not_record", False)
-                    talk["type"] = None
-                    if not talk["abstract"]:
-                        talk["abstract"] = ""
-                    if talk["track"]:
-                        if talk["track"]["name"] not in tracks:
-                            tracks[talk["track"]["name"]] = talk["track"]["color"]
-                schedule["tracks"] = []
-                for name, color in sorted(tracks.items()):
-                    schedule["tracks"].append(
-                        {
-                            "name": name,
-                            "color": color,
-                        }
-                    )
-                schedule["talks"] = sorted(schedule["talks"], key=TalkSorter)
-                node.write_json("schedule.json", schedule)
-                log("updated schedule json")
+                try:
+                    schedule = JSONDecoder(object_pairs_hook=OrderedDict).decode(r.text)
+                    tracks = {}
+                    for talk in schedule["talks"]:
+                        talk["start_str"] = (
+                            datetime.fromtimestamp(talk["start_ts"])
+                            .replace(tzinfo=pytz.utc)
+                            .astimezone(event_tz)
+                            .strftime("%H:%M")
+                        )
+                        talk["room_uuid"] = room_uuid_mapping.get(talk["room"])
+                        talk["do_not_record"] = talk.get("do_not_record", False)
+                        talk["type"] = None
+                        if not talk["abstract"]:
+                            talk["abstract"] = ""
+                        if talk["track"]:
+                            if talk["track"]["name"] not in tracks:
+                                tracks[talk["track"]["name"]] = talk["track"]["color"]
+                    schedule["tracks"] = []
+                    for name, color in sorted(tracks.items()):
+                        schedule["tracks"].append(
+                            {
+                                "name": name,
+                                "color": color,
+                            }
+                        )
+                    schedule["talks"] = sorted(schedule["talks"], key=TalkSorter)
+                    node.write_json("schedule.json", schedule)
+                    log("updated schedule json")
+                except Exception as e:
+                    # Notify the frontend
+                    last_error = repr(e)
+                else:
+                    last_error = ""
         elif config["json_flavour"] == "voc-schema":
             try:
                 r = get(schedule_url)
                 r.raise_for_status()
             except Exception as e:
                 log("getting schedule.json failed: {}".format(repr(e)))
+
+                # Notify the frontend
+                last_error = str(e)
             else:
-                raw_schedule = JSONDecoder(object_pairs_hook=OrderedDict).decode(r.text)["schedule"]
-                schedule = {
-                    "tracks": raw_schedule["conference"]["tracks"],
-                    "talks": [],
-                }
+                try:
+                    raw_schedule = JSONDecoder(object_pairs_hook=OrderedDict).decode(r.text)["schedule"]
+                    schedule = {
+                        "tracks": raw_schedule["conference"]["tracks"],
+                        "talks": [],
+                    }
 
-                for room in raw_schedule["conference"]["rooms"]:
-                    room_uuid_mapping[room["name"]] = room["guid"]
+                    for room in raw_schedule["conference"]["rooms"]:
+                        room_uuid_mapping[room["name"]] = room["guid"]
 
-                event_start = datetime.strptime(
-                    raw_schedule["conference"]["start"][:10], "%Y-%m-%d"
-                )
-                event_end = datetime.strptime(
-                    raw_schedule["conference"]["end"][:10], "%Y-%m-%d"
-                )
-                event_tz = pytz.timezone(raw_schedule["conference"]["time_zone_name"])
-
-                for day in raw_schedule["conference"]["days"]:
-                    event_days.append(
-                        {
-                            "index": day["index"],
-                            "starts": event_tz.localize(
-                                datetime.strptime(
-                                    day["day_start"][:19], "%Y-%m-%dT%H:%M:%S"
-                                )
-                            ),
-                            "ends": event_tz.localize(
-                                datetime.strptime(
-                                    day["day_end"][:19], "%Y-%m-%dT%H:%M:%S"
-                                )
-                            ),
-                        }
+                    event_start = datetime.strptime(
+                        raw_schedule["conference"]["start"][:10], "%Y-%m-%d"
                     )
+                    event_end = datetime.strptime(
+                        raw_schedule["conference"]["end"][:10], "%Y-%m-%d"
+                    )
+                    event_tz = pytz.timezone(raw_schedule["conference"]["time_zone_name"])
 
-                    for room_idx, (room_name, room) in enumerate(day["rooms"].items()):
-                        for talk in room:
-                            start = event_tz.localize(
-                                datetime.strptime(
-                                    talk["date"][:19], "%Y-%m-%dT%H:%M:%S"
+                    for day in raw_schedule["conference"]["days"]:
+                        event_days.append(
+                            {
+                                "index": day["index"],
+                                "starts": event_tz.localize(
+                                    datetime.strptime(
+                                        day["day_start"][:19], "%Y-%m-%dT%H:%M:%S"
+                                    )
+                                ),
+                                "ends": event_tz.localize(
+                                    datetime.strptime(
+                                        day["day_end"][:19], "%Y-%m-%dT%H:%M:%S"
+                                    )
+                                ),
+                            }
+                        )
+
+                        for room_idx, (room_name, room) in enumerate(day["rooms"].items()):
+                            for talk in room:
+                                start = event_tz.localize(
+                                    datetime.strptime(
+                                        talk["date"][:19], "%Y-%m-%dT%H:%M:%S"
+                                    )
                                 )
-                            )
-                            d_d = 0
-                            d_h = 0
-                            d_m = 0
-                            try:
-                                d_h, d_m = talk["duration"].split(":")
-                            except ValueError:
-                                d_d, d_h, d_m = talk["duration"].split(":")
+                                d_d = 0
+                                d_h = 0
+                                d_m = 0
+                                try:
+                                    d_h, d_m = talk["duration"].split(":")
+                                except ValueError:
+                                    d_d, d_h, d_m = talk["duration"].split(":")
 
-                            end = start + timedelta(days = int(d_d), hours=int(d_h), minutes=int(d_m))
+                                end = start + timedelta(days = int(d_d), hours=int(d_h), minutes=int(d_m))
 
-                            talk["start_ts"] = int(
-                                timegm(start.timetuple())
-                                - start.utcoffset().total_seconds()
-                            )
-                            talk["start_str"] = talk["start"]
-                            talk["end_ts"] = int(
-                                timegm(end.timetuple())
-                                - end.utcoffset().total_seconds()
-                            )
-                            locale = talk.get("language", None)
-                            if locale:
-                                talk["locale"] = locale.split('-')[0]
-                            else:
-                                talk["locale"] = None
+                                talk["start_ts"] = int(
+                                    timegm(start.timetuple())
+                                    - start.utcoffset().total_seconds()
+                                )
+                                talk["start_str"] = talk["start"]
+                                talk["end_ts"] = int(
+                                    timegm(end.timetuple())
+                                    - end.utcoffset().total_seconds()
+                                )
+                                locale = talk.get("language", None)
+                                if locale:
+                                    talk["locale"] = locale.split('-')[0]
+                                else:
+                                    talk["locale"] = None
 
-                            track = None
-                            if talk["track"]:
-                                for t in raw_schedule["conference"]["tracks"]:
-                                    if t["name"] == talk["track"]:
-                                        track = {
-                                            "color": t["color"],
-                                            "name": t["name"],
-                                        }
-                                        break
-                            talk["track"] = track
-                            talk["do_not_record"] = talk.get("do_not_record", False)
+                                track = None
+                                if talk["track"]:
+                                    for t in raw_schedule["conference"]["tracks"]:
+                                        if t["name"] == talk["track"]:
+                                            track = {
+                                                "color": t["color"],
+                                                "name": t["name"],
+                                            }
+                                            break
+                                talk["track"] = track
+                                talk["do_not_record"] = talk.get("do_not_record", False)
 
-                            talk["room_uuid"] = room_uuid_mapping.get(talk["room"])
-                            talk["room_idx"] = room_idx
+                                talk["room_uuid"] = room_uuid_mapping.get(talk["room"])
+                                talk["room_idx"] = room_idx
 
-                            if not talk["abstract"]:
-                                talk["abstract"] = ""
+                                if not talk["abstract"]:
+                                    talk["abstract"] = ""
 
-                            persons = []
-                            for p in talk.get("persons", []):
-                                name = p.get("name")
-                                if name:
-                                    persons.append(name)
-                            talk["persons"] = persons
+                                persons = []
+                                for p in talk.get("persons", []):
+                                    name = p.get("name")
+                                    if name:
+                                        persons.append(name)
+                                talk["persons"] = persons
 
-                            schedule["talks"].append(talk)
-                schedule["talks"] = sorted(schedule["talks"], key=TalkSorter)
-                node.write_json("schedule.json", schedule)
-                log("updated schedule json")
+                                schedule["talks"].append(talk)
+                    schedule["talks"] = sorted(schedule["talks"], key=TalkSorter)
+                    node.write_json("schedule.json", schedule)
+                    log("updated schedule json")
+                except Exception as e:
+                    # Notify the frontend
+                    last_error = repr(e)
+                else:
+                    last_error = ""
         else:
             log("unknown json flavour, something is very wrong")
 
@@ -286,7 +309,7 @@ def main():
             uuid_json[uuid] = name
         node.write_json("uuid.json", uuid_json)
 
-        idle(30, event_start, event_end, event_tz, event_days)
+        idle(30, event_start, event_end, event_tz, event_days, last_error)
 
 
 if __name__ == "__main__":

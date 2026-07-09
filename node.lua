@@ -17,6 +17,8 @@ local show_language = true
 local show_track = true
 local is_single_day = false
 local hide_talks_older_than_minutes = 25
+local error_message = ""
+local red = resource.create_colored_texture(1,0,0,1)
 local TOPBAR_FONT_SIZE = 70
 local TALK_FONT_SIZE = 50
 local PADDING = 20
@@ -66,6 +68,8 @@ util.data_mapper{
             day = tonumber(data)
         elseif path == "clock" then
             clock = data
+        elseif path == "error" then
+            error_message = data
         elseif path == "time" then
             time = tonumber(data)
         elseif path == "single_day" then
@@ -137,6 +141,11 @@ function node.render()
 
     local clock_width = font_clock:width(clock, TOPBAR_FONT_SIZE)
     font_clock:write(NATIVE_WIDTH-PADDING-clock_width, y, clock, TOPBAR_FONT_SIZE, 1, 1, 1, 1)
+
+    if error_message ~= "" then
+        red:draw(0, NATIVE_HEIGHT-30, NATIVE_WIDTH, NATIVE_HEIGHT)
+        font_text:write(5, NATIVE_HEIGHT-25, error_message, 20, 0, 0, 0, 1)
+    end
 
     y = y + TOPBAR_FONT_SIZE + PADDING*2
     check_next_talks()
