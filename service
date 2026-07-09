@@ -88,6 +88,10 @@ def idle(seconds, event_start, event_end, event_tz, event_days, last_error):
                     send_data["single_day"] = 1
                 else:
                     send_data["single_day"] = 0
+        else:
+            utc_now = datetime.now(pytz.utc)
+            send_data["clock"] = utc_now.strftime(config["clock_format"]) + " UTC"
+
 
         for k, v in send_data.items():
             node.send_raw("{}/{}:{}".format(SEND_PREFIX, k, v))
