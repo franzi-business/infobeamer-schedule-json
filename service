@@ -44,7 +44,7 @@ def idle(seconds, event_start, event_end, event_tz, event_days, last_error):
     while time.time() < end:
         send_data = {
             "clock": "??",
-            "day": "??",
+            "day": "0",
             "error": last_error,
             "time": int(time.time()),
         }
